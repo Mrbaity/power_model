@@ -1,0 +1,50 @@
+name: Cross-Platform Nuitka Build
+
+# 触发条件：当你 push 代码到 main 分支，或者在网页上手动点击运行时触发
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: 
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    # 核心魔法：矩阵策略，定义三个操作系统
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    # 1. 拉取你的代码到虚拟机
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 安装 Python 环境 (这里以 3.9 为例，可根据你的实际环境修改)
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    # 3. 安装依赖库和 Nuitka
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install nuitka
+        pip install -r requirements.txt
+
+    # 4. 执行 Nuitka 编译命令
+    - name: Compile with Nuitka
+      run: |
+        python -m nuitka --module lstm_model.py --remove-output
+
+    # 5. 收集并上传编译好的二进制文件 (.so 或 .pyd)
+    - name: Upload compiled artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: compiled-model-${{ runner.os }} # 压缩包的名称会带上操作系统名字
+        path: |
+          *.so
+          *.pyd
+        if-no-files-found: error
